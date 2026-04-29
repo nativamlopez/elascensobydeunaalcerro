@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EL ASCENSO — La Cumbre Espera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+  --fire: #FF3D00;
+  --amber: #FFB300;
+  --bg: #060407;
+  --bg2: #0d0a10;
+  --surface: rgba(255,255,255,0.03);
+  --border: rgba(255,255,255,0.07);
+  --text: #f0ede8;
+  --muted: #6b6470;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--fire); }
+
+/* NOISE OVERLAY */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.4s, padding 0.4s;
+}
+nav.scrolled {
+  background: rgba(6,4,7,0.92);
+  backdrop-filter: blur(20px);
+  padding: 14px 40px;
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  text-decoration: none;
+}
+.nav-logo span { color: var(--fire); }
+.nav-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
+.nav-links a {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  background: var(--fire);
+  color: white;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 22px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+.nav-cta:hover { background: #ff5722; transform: translateY(-1px); }
+
+/* LANGUAGE TOGGLE */
+.lang-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+}
+.lang-toggle:hover { border-color: var(--fire); color: var(--fire); }
+.lang-toggle .lang-active { color: var(--fire); }
+.lang-toggle .lang-sep { color: var(--muted); }
+
+.nav-right { display: flex; align-items: center; }
+
+.hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
+.hamburger span { width: 24px; height: 2px; background: var(--text); transition: 0.3s; }
+
+/* HERO */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 60px 40px 80px;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to top, #060407 0%, rgba(6,4,7,0.3) 40%, rgba(6,4,7,0.5) 100%),
+    url('https://unsplash.com/photos/Nb-grTkkDyA/download?force=true&w=2070&q=80');
+  background-size: cover;
+  background-position: center 30%;
+  transform: scale(1.05);
+  transition: transform 8s ease-out;
+}
+.hero-bg.loaded { transform: scale(1); }
+.hero-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--fire);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hero-tag::before {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: var(--fire);
+}
+.hero h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(5rem, 15vw, 14rem);
+  line-height: 0.88;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+  position: relative;
+}
+.hero h1 .stroke-text {
+  -webkit-text-stroke: 1px rgba(255,255,255,0.3);
+  color: transparent;
+}
+.hero-sub {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2rem, 5vw, 5rem);
+  letter-spacing: 0.3em;
+  color: var(--fire);
+  margin-bottom: 40px;
+}
+.hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.hero-date {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.hero-date strong { color: var(--text); display: block; font-size: 1rem; }
+
+/* COUNTDOWN */
+.countdown-strip {
+  background: var(--fire);
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  overflow: hidden;
+  position: relative;
+}
+.countdown-strip::before {
+  content: var(--countdown-bg-text, 'CUENTA REGRESIVA · CUENTA REGRESIVA · CUENTA REGRESIVA · CUENTA REGRESIVA · ');
+  position: absolute;
+  top: 0; left: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  color: rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  line-height: 1;
+  padding-top: 4px;
+}
+.countdown-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+.cd-unit {
+  text-align: center;
+  padding: 0 20px;
+}
+.cd-unit:not(:last-child) {
+  border-right: 1px solid rgba(0,0,0,0.2);
+}
+.cd-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1;
+  color: #000;
+  display: block;
+}
+.cd-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(0,0,0,0.5);
+  display: block;
+  margin-top: 4px;
+}
+
+/* STATS SECTION */
+.stats-section {
+  padding: 100px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--fire);
+  margin-bottom: 60px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+.stat-item {
+  background: var(--bg);
+  padding: 48px 40px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s;
+}
+.stat-item:hover { background: var(--bg2); }
+.stat-item::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--fire);
+  transform: scaleX(0);
+  transition: transform 0.4s;
+  transform-origin: left;
+}
+.stat-item:hover::before { transform: scaleX(1); }
+.stat-item .idx {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 20px;
+  display: block;
+}
+.stat-item .val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3rem, 4vw, 5rem);
+  line-height: 1;
+  color: var(--text);
+  display: block;
+}
+.stat-item .unit {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-top: 8px;
+  display: block;
+}
+.stat-item.highlight .val { color: var(--fire); }
+
+/* ROUTE SECTION */
+.route-section {
+  padding: 100px 40px;
+  background: var(--bg2);
+  position: relative;
+  overflow: hidden;
+}
+.route-section::before {
+  content: var(--route-bg-text, 'RUTA');
+  position: absolute;
+  right: -40px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 12rem;
+  color: rgba(255,255,255,0.015);
+  letter-spacing: 0.1em;
+  pointer-events: none;
+}
+.route-inner { max-width: 1400px; margin: 0 auto; }
+.route-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 60px;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3rem, 6vw, 6rem);
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+}
+.route-desc {
+  max-width: 360px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.route-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.map-wrap {
+  position: relative;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.map-badge {
+  position: absolute;
+  top: 16px; left: 16px;
+  z-index: 500;
+  background: rgba(6,4,7,0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.map-badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  animation: pulse-dot 1.5s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+#map {
+  height: clamp(360px, 58vh, 520px);
+  min-height: 360px;
+  width: 100%;
+  touch-action: pan-x pan-y;
+}
+.chart-wrap {
+  border: 1px solid var(--border);
+  padding: 40px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.chart-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.chart-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 32px;
+}
+.chart-container {
+  flex: 1;
+  position: relative;
+  min-height: clamp(300px, 44vh, 380px);
+  width: 100%;
+}
+.chart-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+.map-wrap,
+.chart-wrap {
+  min-width: 0;
+}
+.leaflet-control-zoom a {
+  background: rgba(6,4,7,0.92) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+.leaflet-control-attribution {
+  background: rgba(6,4,7,0.78) !important;
+  color: rgba(255,255,255,0.55) !important;
+}
+.leaflet-control-attribution a { color: rgba(255,255,255,0.75) !important; }
+
+/* TIMELINE / ITINERARY */
+.timeline-section {
+  padding: 100px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.timeline {
+  margin-top: 60px;
+  position: relative;
+  padding-left: 40px;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.timeline-item {
+  position: relative;
+  padding: 0 0 60px 48px;
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 0.6s, transform 0.6s;
+}
+.timeline-item.visible { opacity: 1; transform: none; }
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -4px; top: 6px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--fire);
+}
+.timeline-item:last-child { padding-bottom: 0; }
+.tl-time {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--fire);
+  letter-spacing: 0.15em;
+  margin-bottom: 10px;
+}
+.tl-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.tl-desc {
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 600px;
+}
+.tl-badges {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.tl-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.tl-badge.warn {
+  border-color: rgba(255,179,0,0.4);
+  color: var(--amber);
+}
+.tl-badge.danger {
+  border-color: rgba(255,61,0,0.4);
+  color: var(--fire);
+}
+
+/* EQUIPMENT */
+.equip-section {
+  background: var(--bg2);
+  padding: 100px 40px;
+  position: relative;
+  overflow: hidden;
+}
+.equip-inner { max-width: 1400px; margin: 0 auto; }
+.equip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 60px;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.equip-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+.equip-card {
+  background: var(--bg2);
+  padding: 40px;
+  transition: background 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.equip-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--fire) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.equip-card:hover { background: #100c15; }
+.equip-card:hover::after { opacity: 0.04; }
+.equip-icon {
+  width: 48px; height: 48px;
+  margin-bottom: 28px;
+  color: var(--fire);
+}
+.equip-icon svg { width: 100%; height: 100%; }
+.equip-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+.equip-desc {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.75;
+}
+.equip-card.critical {
+  background: rgba(255,61,0,0.04);
+}
+.equip-card.critical .equip-icon { color: var(--fire); }
+.critical-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--fire);
+  border: 1px solid rgba(255,61,0,0.3);
+  padding: 3px 8px;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+.dl-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+.dl-btn:hover { border-color: var(--text); background: rgba(255,255,255,0.04); }
+
+/* WEATHER / CONDITIONS */
+.conditions-section {
+  padding: 100px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.conditions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 60px;
+}
+.cond-card {
+  border: 1px solid var(--border);
+  padding: 32px;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.cond-card:hover { border-color: rgba(255,255,255,0.15); }
+.cond-icon {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  display: block;
+}
+.cond-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.cond-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.5rem;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.cond-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.alert-strip {
+  background: rgba(255,179,0,0.08);
+  border: 1px solid rgba(255,179,0,0.2);
+  padding: 20px 28px;
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.alert-strip .icon { font-size: 1.2rem; }
+.alert-strip p {
+  font-size: 0.82rem;
+  color: var(--amber);
+  line-height: 1.5;
+}
+.alert-strip p strong { font-weight: 700; }
+
+/* GALLERY */
+.gallery-section {
+  padding: 100px 40px;
+  background: var(--bg2);
+  overflow: hidden;
+}
+.gallery-inner { max-width: 1400px; margin: 0 auto; }
+.gallery-strip {
+  display: flex;
+  gap: 12px;
+  margin-top: 60px;
+  height: 400px;
+}
+.gallery-img {
+  flex: 1;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  position: relative;
+  transition: flex 0.5s cubic-bezier(0.4,0,0.2,1);
+  cursor: pointer;
+  filter: grayscale(30%);
+}
+.gallery-img:hover {
+  flex: 2.5;
+  filter: grayscale(0%);
+}
+.gallery-img::after {
+  content: attr(data-caption);
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 24px 20px 16px;
+  background: linear-gradient(to top, rgba(6,4,7,0.9), transparent);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.gallery-img:hover::after { opacity: 1; }
+
+/* SAFETY */
+.safety-section {
+  padding: 100px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.safety-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 60px;
+}
+.safety-card {
+  border: 1px solid var(--border);
+  padding: 40px;
+  position: relative;
+  transition: border-color 0.3s;
+}
+.safety-card:hover { border-color: rgba(255,255,255,0.15); }
+.safety-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 5rem;
+  color: rgba(255,255,255,0.04);
+  line-height: 1;
+  position: absolute;
+  top: 20px; right: 24px;
+}
+.safety-icon-wrap {
+  width: 44px; height: 44px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  color: var(--fire);
+}
+.safety-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+.safety-text {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+/* REGISTER / CTA */
+.cta-section {
+  background: var(--fire);
+  padding: 120px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.cta-section::before {
+  content: var(--cta-bg-text, 'INSCRÍBETE');
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(8rem, 20vw, 22rem);
+  color: rgba(0,0,0,0.07);
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+  pointer-events: none;
+}
+.cta-eyebrow {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(0,0,0,0.5);
+  margin-bottom: 24px;
+}
+.cta-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(4rem, 10vw, 9rem);
+  line-height: 0.9;
+  color: #000;
+  letter-spacing: 0.02em;
+  margin-bottom: 32px;
+}
+.cta-sub {
+  font-size: 1rem;
+  color: rgba(0,0,0,0.6);
+  max-width: 500px;
+  margin: 0 auto 48px;
+  line-height: 1.7;
+}
+.cta-btn {
+  display: inline-block;
+  background: #000;
+  color: var(--fire);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 18px 48px;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+}
+.cta-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+.cta-spots {
+  margin-top: 28px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: rgba(0,0,0,0.45);
+}
+.cta-spots strong { color: rgba(0,0,0,0.7); }
+
+/* FOOTER */
+footer {
+  background: #030205;
+  padding: 60px 40px 40px;
+  border-top: 1px solid var(--border);
+}
+.footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 40px;
+  flex-wrap: wrap;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.footer-brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.5rem;
+  letter-spacing: 0.15em;
+  color: var(--text);
+}
+.footer-brand span { color: var(--fire); }
+.footer-tagline {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 8px;
+  max-width: 280px;
+  line-height: 1.6;
+}
+.footer-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.footer-links a {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--text); }
+.footer-contact p {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.footer-contact a { color: var(--fire); text-decoration: none; }
+.footer-bottom {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.footer-copy {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.15);
+}
+.footer-copy span { color: var(--fire); }
+
+/* REVEAL ANIMATIONS */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1), transform 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.reveal.visible { opacity: 1; transform: none; }
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* MOBILE NAV MENU */
+.mobile-menu {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(6,4,7,0.97);
+  z-index: 999;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+}
+.mobile-menu.open { display: flex; }
+.mobile-menu a {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3rem;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.mobile-menu a:hover { color: var(--fire); }
+.close-menu {
+  position: absolute;
+  top: 20px; right: 24px;
+  font-size: 2rem;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'Space Mono', monospace;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .route-grid { grid-template-columns: 1fr; }
+  .equip-grid { grid-template-columns: repeat(2, 1fr); }
+  .conditions-grid { grid-template-columns: repeat(2, 1fr); }
+  .safety-grid { grid-template-columns: 1fr; }
+  .gallery-strip { height: 260px; }
+}
+
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  nav.scrolled { padding: 12px 20px; }
+  .nav-links { display: none; }
+  .nav-cta { display: none; }
+  .lang-toggle { margin-right: 12px; padding: 6px 10px; font-size: 0.55rem; }
+  .hamburger { display: flex; }
+  .hero { padding: 20 20px 60px; }
+  .stats-section, .timeline-section, .conditions-section, .safety-section { padding: 60px 20px; }
+  .route-section, .equip-section, .gallery-section { padding: 60px 20px; }
+  .cta-section { padding: 80px 20px; }
+  footer { padding: 40px 20px 24px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .equip-grid { grid-template-columns: 1fr; }
+  .conditions-grid { grid-template-columns: repeat(2, 1fr); }
+  .countdown-strip { padding: 16px 20px; }
+  .cd-unit { padding: 0 12px; }
+  .stat-item { padding: 28px 24px; }
+  .route-header { margin-bottom: 32px; align-items: flex-start; }
+  .route-desc { max-width: 100%; font-size: 0.86rem; }
+  .route-grid { gap: 20px; }
+  .map-wrap, .chart-wrap { width: 100%; overflow: hidden; }
+  #map {
+    height: 64vh;
+    min-height: 340px;
+    max-height: 500px;
+  }
+  .map-badge {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    justify-content: center;
+    padding: 9px 12px;
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+  }
+  .chart-wrap { padding: 24px 16px 20px; }
+  .chart-title { font-size: 1.7rem; }
+  .chart-sub { margin-bottom: 18px; line-height: 1.45; }
+  .chart-container {
+    height: 44vh;
+    min-height: 300px;
+    max-height: 380px;
+  }
+  .leaflet-control-zoom a {
+    width: 38px !important;
+    height: 38px !important;
+    line-height: 38px !important;
+    font-size: 18px !important;
+  }
+  .leaflet-control-attribution {
+    max-width: 68vw;
+    white-space: normal;
+    font-size: 8px !important;
+    line-height: 1.25;
+  }
+  .gallery-strip { flex-direction: column; height: auto; }
+  .gallery-img { height: 200px; flex: none !important; }
+  .gallery-img:hover { filter: grayscale(0%); }
+  .footer-inner { flex-direction: column; gap: 32px; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .conditions-grid { grid-template-columns: 1fr 1fr; }
+  .route-section { padding: 52px 14px; }
+  .route-header { gap: 18px; }
+  .route-grid { gap: 16px; }
+  #map {
+    height: 62vh;
+    min-height: 300px;
+    max-height: 430px;
+  }
+  .chart-wrap { padding: 20px 12px 18px; }
+  .chart-title { font-size: 1.55rem; }
+  .chart-sub { font-size: 0.55rem; margin-bottom: 16px; }
+  .chart-container {
+    height: 42vh;
+    min-height: 270px;
+    max-height: 340px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <button class="close-menu" onclick="toggleMenu()">✕</button>
+  <a href="#ruta" onclick="toggleMenu()" data-i18n="nav.route">Ruta</a>
+  <a href="#itinerario" onclick="toggleMenu()" data-i18n="nav.itinerary">Itinerario</a>
+  <a href="#equipo" onclick="toggleMenu()" data-i18n="nav.equipment">Equipo</a>
+  <a href="#" id="mobileWhatsappLink" onclick="toggleMenu(); openWhatsApp(); return false;" data-i18n="nav.book">Reservar</a>
+</div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">EL <span>ASCENSO</span> BY DEUNAALCERRO</a>
+  <ul class="nav-links">
+    <li><a href="#ruta" data-i18n="nav.route">Ruta</a></li>
+    <li><a href="#itinerario" data-i18n="nav.itinerary">Itinerario</a></li>
+    <li><a href="#equipo" data-i18n="nav.equipment">Equipo</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="lang-toggle" onclick="toggleLang()" aria-label="Toggle language">
+      <span id="langEs" class="lang-active">ES</span>
+      <span class="lang-sep">/</span>
+      <span id="langEn">EN</span>
+    </button>
+    <a href="#" onclick="openWhatsApp(); return false;" class="nav-cta" data-i18n="nav.book">Reservar</a>
+  </div>
+  <div class="hamburger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-bg" id="heroBg"></div>
+  <div style="position:relative;z-index:2;">
+    <p class="hero-tag" data-i18n="hero.tag">03 · Mayo · 2026 — Tarija - Bolivia</p>
+    <h1>
+      EL<br>
+      <span class="stroke-text">ASCEN</span>SO
+    </h1>
+    <p class="hero-sub" data-i18n="hero.sub">La Cumbre Espera</p>
+    <div class="hero-meta">
+      <div class="hero-date">
+        <strong>3.580 m</strong>
+        <span data-i18n="hero.maxAlt">Altitud Máxima</span>
+      </div>
+      <div style="width:1px;height:40px;background:var(--border)"></div>
+      <div class="hero-date">
+        <strong>11 km</strong>
+        <span data-i18n="hero.totalDist">Distancia Total</span>
+      </div>
+      <div style="width:1px;height:40px;background:var(--border)"></div>
+      <div class="hero-date">
+        <strong data-i18n="hero.technical">Técnica</strong>
+        <span data-i18n="hero.difficulty">Dificultad</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- COUNTDOWN -->
+<div class="countdown-strip">
+  <div class="countdown-inner">
+    <div class="cd-unit">
+      <span class="cd-num" id="days">00</span>
+      <span class="cd-label" data-i18n="countdown.days">Días</span>
+    </div>
+    <div class="cd-unit">
+      <span class="cd-num" id="hours">00</span>
+      <span class="cd-label" data-i18n="countdown.hours">Horas</span>
+    </div>
+    <div class="cd-unit">
+      <span class="cd-num" id="minutes">00</span>
+      <span class="cd-label" data-i18n="countdown.mins">Mins</span>
+    </div>
+    <div class="cd-unit">
+      <span class="cd-num" id="seconds">00</span>
+      <span class="cd-label" data-i18n="countdown.secs">Segs</span>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<section class="stats-section">
+  <div class="section-label reveal" data-i18n="stats.label">Datos de la Expedición</div>
+  <div class="stats-grid">
+    <div class="stat-item reveal reveal-delay-1">
+      <span class="idx" data-i18n="stats.s1.idx">01 / Distancia</span>
+      <span class="val" data-target="11">0</span>
+      <span class="unit" data-i18n="stats.s1.unit">KILÓMETROS TOTALES</span>
+    </div>
+    <div class="stat-item reveal reveal-delay-2">
+      <span class="idx" data-i18n="stats.s2.idx">02 / Desnivel</span>
+      <span class="val" data-target="1489">0</span>
+      <span class="unit" data-i18n="stats.s2.unit">METROS DE DESNIVEL +</span>
+    </div>
+    <div class="stat-item reveal reveal-delay-3">
+      <span class="idx" data-i18n="stats.s3.idx">03 / Altitud Máxima</span>
+      <span class="val" data-target="3580">0</span>
+      <span class="unit" data-i18n="stats.s3.unit">METROS SOBRE EL MAR</span>
+    </div>
+    <div class="stat-item highlight reveal reveal-delay-4">
+      <span class="idx" data-i18n="stats.s4.idx">04 / Dificultad</span>
+      <span class="val" style="font-size:clamp(2rem,3.5vw,3.5rem);" data-i18n="stats.s4.val">TÉCNICA</span>
+      <span class="unit" data-i18n="stats.s4.unit">ALTA MONTAÑA — DIFICIL</span>
+    </div>
+  </div>
+</section>
+
+<!-- ROUTE -->
+<section class="route-section" id="ruta">
+  <div class="route-inner">
+    <div class="route-header">
+      <div>
+        <div class="section-label reveal" style="margin-bottom:20px;" data-i18n="route.label">Inteligencia de Ruta</div>
+        <h2 class="section-title reveal reveal-delay-1" data-i18n-html="route.title">EL<br>TERRENO</h2>
+      </div>
+      <p class="route-desc reveal reveal-delay-2" data-i18n="route.desc">Las pendientes más brutales ocurren en los primeros 5 kilómetros del ascenso. Estudia cada metro. Conoce el terreno antes de pisarlo.</p>
+    </div>
+    <div class="route-grid">
+      <div class="map-wrap reveal">
+        <div class="map-badge" data-i18n="route.gps">Ruta GPS</div>
+        <div id="map"></div>
+      </div>
+      <div class="chart-wrap reveal reveal-delay-1">
+        <div class="chart-title" data-i18n="route.chartTitle">Perfil Altimétrico</div>
+        <div class="chart-sub" data-i18n="route.chartSub">DISTANCIA (KM) vs. ELEVACIÓN (M)</div>
+        <div class="chart-container">
+          <canvas id="elevationChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TIMELINE / ITINERARY -->
+<section class="timeline-section" id="itinerario">
+  <div class="section-label reveal" data-i18n="timeline.label">Plan de Marcha</div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;">
+    <h2 class="section-title reveal reveal-delay-1" style="font-size:clamp(3rem,5vw,5rem);" data-i18n-html="timeline.title">ITINERARIO<br>DEL DÍA</h2>
+    <p class="reveal reveal-delay-2" style="max-width:340px;font-size:0.85rem;color:var(--muted);line-height:1.7;" data-i18n="timeline.desc">Cada momento tiene un propósito. Sin demoras. El clima en altitud no negocia.</p>
+  </div>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="tl-time">05:40 hrs</div>
+      <div class="tl-title" data-i18n="timeline.t1.title">Punto de Encuentro</div>
+      <div class="tl-desc" data-i18n="timeline.t1.desc">Concentración en el puente San Martin. Revisión final de equipamiento, hidratación de carga y briefing de seguridad obligatorio. Temperatura estimada: 8°C.</div>
+      <div class="tl-badges">
+        <span class="tl-badge">-21.532,-64.742</span>
+        <span class="tl-badge warn" data-i18n="timeline.t1.badge">DEBES SER PUNTUAL</span>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="tl-time">06:30 hrs</div>
+      <div class="tl-title" data-i18n="timeline.t2.title">Fase I — INICIO</div>
+      <div class="tl-desc" data-i18n="timeline.t2.desc">Iniciamos al pie de la montaña su imponente presencia nos muestra el desafio que buscamos cumplir.</div>
+      <div class="tl-badges">
+        <span class="tl-badge">2.193 msnm</span>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="tl-time">11:30 hrs</div>
+      <div class="tl-title" data-i18n="timeline.t3.title">☑ CUMBRE — 3 m</div>
+      <div class="tl-desc" data-i18n="timeline.t3.desc">La cima. Tiempo máximo en cumbre: 20 minutos. Registro fotográfico, hidratación y descenso inmediato. No se negocia el tiempo de bajada.</div>
+      <div class="tl-badges">
+        <span class="tl-badge">3.580 msnm.</span>
+        <span class="tl-badge warn" data-i18n="timeline.t3.badge">Vientos fuertes</span>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="tl-time">12:00 hrs</div>
+      <div class="tl-title" data-i18n="timeline.t4.title">Descenso</div>
+      <div class="tl-desc" data-i18n="timeline.t4.desc">Inicio de bajada a punto final.</div>
+      <div class="tl-badges">
+        <span class="tl-badge">3.580 msnm.</span>
+        <span class="tl-badge" data-i18n="timeline.t4.badge">Completado</span>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="tl-time">16:30 hrs</div>
+      <div class="tl-title" data-i18n="timeline.t5.title">Llegada</div>
+      <div class="tl-desc" data-i18n="timeline.t5.desc">Llegada al pie de la montaña, camino carretero.</div>
+      <div class="tl-badges">
+        <span class="tl-badge">2090 msnm</span>
+        <span class="tl-badge" data-i18n="timeline.t5.badge">Objetivo Completado</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EQUIPMENT -->
+<section class="equip-section" id="equipo">
+  <div class="equip-inner">
+    <div class="equip-header">
+      <div>
+        <div class="section-label reveal" style="margin-bottom:20px;" data-i18n="equip.label">Lista de Control</div>
+        <h2 class="section-title reveal reveal-delay-1" data-i18n-html="equip.title">EQUIPAMIENTO<br>OBLIGATORIO</h2>
+        <p class="reveal reveal-delay-2" style="color:var(--muted);font-size:0.85rem;margin-top:16px;max-width:400px;line-height:1.7;" data-i18n="equip.desc">Sin excepciones. El equipo es para tu seguridad y la del equipo.</p>
+      </div>
+    </div>
+    <div class="equip-grid">
+      <div class="equip-card reveal">
+        <div class="equip-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <div class="equip-name" data-i18n="equip.e1.name">Calzado Técnico</div>
+        <div class="equip-desc" data-i18n="equip.e1.desc">Botas o zapatillas de montaña o trial en buenas condiciones.</div>
+      </div>
+      <div class="equip-card reveal reveal-delay-1">
+        <div class="equip-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+        </div>
+        <div class="equip-name" data-i18n="equip.e2.name">Ropa adecuada</div>
+        <div class="equip-desc" data-i18n="equip.e2.desc">Rompevientos, pantalon, gorra, lentes de sol, etc.</div>
+      </div>
+      <div class="equip-card reveal reveal-delay-2">
+        <div class="equip-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+        </div>
+        <div class="equip-name" data-i18n="equip.e3.name">Navegación GPS</div>
+        <div class="equip-desc" data-i18n="equip.e3.desc">Teléfono completamente cargado. Sin excusas.</div>
+      </div>
+      <div class="equip-card reveal">
+        <div class="equip-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+        </div>
+        <div class="equip-name" data-i18n="equip.e4.name">Hidratación & Nutrición</div>
+        <div class="equip-desc" data-i18n="equip.e4.desc">Mínimo 2L de agua con filtro de purificación de respaldo. Más de 3.000 kcal en carbohidratos de alta disponibilidad. Sales, geles y electrolitos obligatorios.</div>
+      </div>
+      <div class="equip-card reveal reveal-delay-1">
+        <div class="equip-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+        </div>
+        <div class="equip-name" data-i18n="equip.e5.name">Baston o palo de Trekking</div>
+        <div class="equip-desc" data-i18n="equip.e5.desc">Bastones. Descarga hasta 40% del esfuerzo en el descenso. Opcional para los tramos de roca expuesta</div>
+      </div>
+      <div class="equip-card critical reveal reveal-delay-2">
+        <div class="critical-tag" data-i18n="equip.critical">⚠ Crítico</div>
+        <div class="equip-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div class="equip-name" data-i18n="equip.e6.name">Kit de Emergencia</div>
+        <div class="equip-desc" data-i18n="equip.e6.desc">Botiquín con: vendas elásticas, curas, analgésicos, antiinflamatorios, etc. Obligatorio personal.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONDITIONS / WEATHER -->
+<section class="conditions-section">
+  <div class="section-label reveal" data-i18n="cond.label">Condiciones Esperadas</div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;">
+    <h2 class="section-title reveal reveal-delay-1" style="font-size:clamp(2.5rem,4vw,4.5rem);" data-i18n-html="cond.title">CLIMA &<br>TERRENO</h2>
+  </div>
+  <div class="conditions-grid">
+    <div class="cond-card reveal">
+      <span class="cond-icon">🌡️</span>
+      <div class="cond-title" data-i18n="cond.c1.title">Temperatura del día</div>
+      <div class="cond-val">8 - 19°C</div>
+      <div class="cond-desc" data-i18n="cond.c1.desc">Temperatura base estimada.</div>
+    </div>
+    <div class="cond-card reveal reveal-delay-1">
+      <span class="cond-icon">💨</span>
+      <div class="cond-title" data-i18n="cond.c2.title">Viento Máximo</div>
+      <div class="cond-val">26 km/h</div>
+      <div class="cond-desc" data-i18n="cond.c2.desc">Ráfagas registradas históricamente en la cresta norte. En condición de viento extremo se activará protocolo de descenso de emergencia.</div>
+    </div>
+    <div class="cond-card reveal reveal-delay-2">
+      <span class="cond-icon">🌧️</span>
+      <div class="cond-title" data-i18n="cond.c3.title">Lluvia en el  Recorrido</div>
+      <div class="cond-val">01%</div>
+      <div class="cond-desc" data-i18n="cond.c3.desc">Probabilidad de lluvia.</div>
+    </div>
+    <div class="cond-card reveal reveal-delay-3">
+      <span class="cond-icon">☀️</span>
+      <div class="cond-title" data-i18n="cond.c4.title">Hora Solar Útil</div>
+      <div class="cond-val">14 hrs</div>
+      <div class="cond-desc" data-i18n="cond.c4.desc">Salida de sol: 06:23 hrs. Puesta: 18:31 hrs. El itinerario está diseñado para completarse íntegramente en luz diurna.</div>
+    </div>
+  </div>
+  <div class="alert-strip reveal">
+    <span class="icon">⚡</span>
+    <p data-i18n-html="cond.alert"><strong>Alerta de Altitud:</strong> Por encima de 3.500 m pueden aparecer síntomas de mal de altura (cefalea, náuseas, fatiga extrema).</p>
+  </div>
+</section>
+
+<!-- GALLERY -->
+ <!--
+<section class="gallery-section">
+  <div class="gallery-inner">
+    <div class="section-label reveal">Galería</div>
+    <h2 class="section-title reveal reveal-delay-1" style="font-size:clamp(2.5rem,4vw,4.5rem);">EL TERRENO<br>TE ESPERA</h2>
+    <div class="gallery-strip">
+      <div class="gallery-img" data-caption="CRESTA NORTE · 3.600M" style="background-image:url('https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')"></div>
+      <div class="gallery-img" data-caption="LA CUMBRE · 4.850M" style="background-image:url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')"></div>
+      <div class="gallery-img" data-caption="VALLE DE PARTIDA" style="background-image:url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')"></div>
+      <div class="gallery-img" data-caption="TRAMO DE ROCA TÉCNICA" style="background-image:url('https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')"></div>
+      <div class="gallery-img" data-caption="NIEVE EN FASE FINAL" style="background-image:url('https://images.unsplash.com/photo-1520637836862-4d197d17c93a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')"></div>
+    </div>
+  </div>
+</section>
+-->
+
+<!-- CTA / REGISTER -->
+<section class="cta-section" id="inscripcion">
+  <h2 class="cta-title" data-i18n-html="cta.title">¿ESTÁS<br>LISTO?</h2>
+  <p class="cta-sub" data-i18n="cta.sub">Esta no es una excursión. Es una prueba de carácter. Si tienes que pensarlo, ya tienes la respuesta.</p>
+  <a href="#" onclick="openWhatsApp(); return false;" class="cta-btn" data-i18n="cta.btn">Reservar mi plaza por WhatsApp</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">EL <span>ASCENSO</span> BY DEUNAALCERRO</div>
+      <p class="footer-tagline" data-i18n="footer.tagline">Expedición de alta montaña en Tarija - Bolivia. Donde la montaña te pone en tu lugar.</p>
+    </div>
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;" data-i18n="footer.sections">Secciones</div>
+      <ul class="footer-links">
+        <li><a href="#ruta" data-i18n="footer.l1">Ruta e Inteligencia</a></li>
+        <li><a href="#itinerario" data-i18n="footer.l2">Itinerario del Día</a></li>
+        <li><a href="#equipo" data-i18n="footer.l3">Equipamiento</a></li>
+        <li><a href="#" onclick="openWhatsApp(); return false;" data-i18n="footer.l4">Inscripción</a></li>
+      </ul>
+    </div>
+    <div class="footer-contact">
+      <div style="font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;" data-i18n="footer.contact">Contacto</div>
+      <p>
+        <a href="mailto:lopezbertram@gmail.com">lopezbertram@gmail.com</a><br>
+        <span data-i18n="footer.location">Tarija, Bolivia</span><br><br>
+        <span style="color:var(--muted);" data-i18n="footer.phone">Numero:</span><br>
+        <a href="https://wa.me/59177178908" target="_blank" rel="noopener" style="color:var(--text);">+591 77178908</a>
+      </p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy"><span data-i18n="footer.copy">© 2026 DEUNAALCERRO · Bolivia · Todos los derechos reservados</span></p>
+    <p class="footer-copy" data-i18n="footer.tag2">Diseñado para quienes no se rinden</p>
+  </div>
+</footer>
+
+<!-- SCRIPTS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ====== WHATSAPP CONFIG ======
+const WHATSAPP_NUMBER = '59177178908'; // +591 77178908
+const WHATSAPP_MESSAGES = {
+  es: 'Hola! Quiero reservar mi plaza para EL ASCENSO 2026. ¿Podrían darme más información?',
+  en: 'Hi! I want to book my spot for EL ASCENSO 2026. Could you give me more information?'
+};
+function openWhatsApp() {
+  const msg = encodeURIComponent(WHATSAPP_MESSAGES[currentLang] || WHATSAPP_MESSAGES.es);
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank', 'noopener');
+}
+
+// ====== TRANSLATIONS ======
+const I18N = {
+  es: {
+    'nav.route': 'Ruta',
+    'nav.itinerary': 'Itinerario',
+    'nav.equipment': 'Equipo',
+    'nav.book': 'Reservar',
+    'hero.tag': '03 · Mayo · 2026 — Tarija - Bolivia',
+    'hero.sub': 'La Cumbre Espera',
+    'hero.maxAlt': 'Altitud Máxima',
+    'hero.totalDist': 'Distancia Total',
+    'hero.technical': 'Técnica',
+    'hero.difficulty': 'Dificultad',
+    'countdown.days': 'Días',
+    'countdown.hours': 'Horas',
+    'countdown.mins': 'Mins',
+    'countdown.secs': 'Segs',
+    'stats.label': 'Datos de la Expedición',
+    'stats.s1.idx': '01 / Distancia',
+    'stats.s1.unit': 'KILÓMETROS TOTALES',
+    'stats.s2.idx': '02 / Desnivel',
+    'stats.s2.unit': 'METROS DE DESNIVEL +',
+    'stats.s3.idx': '03 / Altitud Máxima',
+    'stats.s3.unit': 'METROS SOBRE EL MAR',
+    'stats.s4.idx': '04 / Dificultad',
+    'stats.s4.val': 'TÉCNICA',
+    'stats.s4.unit': 'ALTA MONTAÑA — DIFÍCIL',
+    'route.label': 'Inteligencia de Ruta',
+    'route.title': 'EL<br>TERRENO',
+    'route.desc': 'Las pendientes más brutales ocurren en los primeros 5 kilómetros del ascenso. Estudia cada metro. Conoce el terreno antes de pisarlo.',
+    'route.gps': 'Ruta GPS',
+    'route.chartTitle': 'Perfil Altimétrico',
+    'route.chartSub': 'DISTANCIA (KM) vs. ELEVACIÓN (M)',
+    'timeline.label': 'Plan de Marcha',
+    'timeline.title': 'ITINERARIO<br>DEL DÍA',
+    'timeline.desc': 'Cada momento tiene un propósito. Sin demoras. El clima en altitud no negocia.',
+    'timeline.t1.title': 'Punto de Encuentro',
+    'timeline.t1.desc': 'Concentración en el puente San Martin. Revisión final de equipamiento, hidratación de carga y briefing de seguridad obligatorio. Temperatura estimada: 8°C.',
+    'timeline.t1.badge': 'DEBES SER PUNTUAL',
+    'timeline.t2.title': 'Fase I — INICIO',
+    'timeline.t2.desc': 'Iniciamos al pie de la montaña, su imponente presencia nos muestra el desafío que buscamos cumplir.',
+    'timeline.t3.title': '☑ CUMBRE',
+    'timeline.t3.desc': 'La cima. Tiempo máximo en cumbre: 20 minutos. Registro fotográfico, hidratación y descenso inmediato. No se negocia el tiempo de bajada.',
+    'timeline.t3.badge': 'Vientos fuertes',
+    'timeline.t4.title': 'Descenso',
+    'timeline.t4.desc': 'Inicio de bajada a punto final.',
+    'timeline.t4.badge': 'Completado',
+    'timeline.t5.title': 'Llegada',
+    'timeline.t5.desc': 'Llegada al pie de la montaña, camino carretero.',
+    'timeline.t5.badge': 'Objetivo Completado',
+    'equip.label': 'Lista de Control',
+    'equip.title': 'EQUIPAMIENTO<br>OBLIGATORIO',
+    'equip.desc': 'Sin excepciones. El equipo es para tu seguridad y la del equipo.',
+    'equip.e1.name': 'Calzado Técnico',
+    'equip.e1.desc': 'Botas o zapatillas de montaña o trail en buenas condiciones.',
+    'equip.e2.name': 'Ropa adecuada',
+    'equip.e2.desc': 'Rompevientos, pantalón, gorra, lentes de sol, etc.',
+    'equip.e3.name': 'Navegación GPS',
+    'equip.e3.desc': 'Teléfono completamente cargado. Sin excusas.',
+    'equip.e4.name': 'Hidratación & Nutrición',
+    'equip.e4.desc': 'Mínimo 2L de agua con filtro de purificación de respaldo. Más de 3.000 kcal en carbohidratos de alta disponibilidad. Sales, geles y electrolitos obligatorios.',
+    'equip.e5.name': 'Bastón o palo de Trekking',
+    'equip.e5.desc': 'Bastones. Descarga hasta 40% del esfuerzo en el descenso. Opcional para los tramos de roca expuesta.',
+    'equip.critical': '⚠ Crítico',
+    'equip.e6.name': 'Kit de Emergencia',
+    'equip.e6.desc': 'Botiquín con: vendas elásticas, curas, analgésicos, antiinflamatorios, etc. Obligatorio personal.',
+    'cond.label': 'Condiciones Esperadas',
+    'cond.title': 'CLIMA &<br>TERRENO',
+    'cond.c1.title': 'Temperatura del día',
+    'cond.c1.desc': 'Temperatura base estimada.',
+    'cond.c2.title': 'Viento Máximo',
+    'cond.c2.desc': 'Ráfagas registradas históricamente en la cresta norte. En condición de viento extremo se activará protocolo de descenso de emergencia.',
+    'cond.c3.title': 'Lluvia en el Recorrido',
+    'cond.c3.desc': 'Probabilidad de lluvia.',
+    'cond.c4.title': 'Hora Solar Útil',
+    'cond.c4.desc': 'Salida de sol: 06:23 hrs. Puesta: 18:31 hrs. El itinerario está diseñado para completarse íntegramente en luz diurna.',
+    'cond.alert': '<strong>Alerta de Altitud:</strong> Por encima de 3.500 m pueden aparecer síntomas de mal de altura (cefalea, náuseas, fatiga extrema).',
+    'cta.eyebrow': 'Quedan pocas plazas',
+    'cta.title': '¿ESTÁS<br>LISTO?',
+    'cta.sub': 'Esta no es una excursión. Es una prueba de carácter. Si tienes que pensarlo, ya tienes la respuesta.',
+    'cta.btn': 'Reservar mi plaza por WhatsApp',
+    'cta.spots': 'Solo <strong>8 plazas disponibles</strong> de 24 · Cierre de inscripciones: 01 Junio 2026',
+    'footer.tagline': 'Expedición de alta montaña en Tarija - Bolivia. Donde la montaña te pone en tu lugar.',
+    'footer.sections': 'Secciones',
+    'footer.l1': 'Ruta e Inteligencia',
+    'footer.l2': 'Itinerario del Día',
+    'footer.l3': 'Equipamiento',
+    'footer.l4': 'Inscripción',
+    'footer.contact': 'Contacto',
+    'footer.location': 'Tarija, Bolivia',
+    'footer.phone': 'Número:',
+    'footer.copy': '© 2026 DEUNAALCERRO · Bolivia · Todos los derechos reservados',
+    'footer.tag2': 'Diseñado para quienes no se rinden',
+    'bg.cta': '"INSCRÍBETE"',
+    'bg.countdown': '"CUENTA REGRESIVA · CUENTA REGRESIVA · CUENTA REGRESIVA · CUENTA REGRESIVA · "',
+    'bg.route': '"RUTA"'
+  },
+  en: {
+    'nav.route': 'Route',
+    'nav.itinerary': 'Itinerary',
+    'nav.equipment': 'Gear',
+    'nav.book': 'Book Now',
+    'hero.tag': 'May · 03 · 2026 — Tarija - Bolivia',
+    'hero.sub': 'The Summit Awaits',
+    'hero.maxAlt': 'Max Altitude',
+    'hero.totalDist': 'Total Distance',
+    'hero.technical': 'Technical',
+    'hero.difficulty': 'Difficulty',
+    'countdown.days': 'Days',
+    'countdown.hours': 'Hours',
+    'countdown.mins': 'Mins',
+    'countdown.secs': 'Secs',
+    'stats.label': 'Expedition Data',
+    'stats.s1.idx': '01 / Distance',
+    'stats.s1.unit': 'TOTAL KILOMETERS',
+    'stats.s2.idx': '02 / Elevation',
+    'stats.s2.unit': 'METERS OF GAIN +',
+    'stats.s3.idx': '03 / Max Altitude',
+    'stats.s3.unit': 'METERS ABOVE SEA LEVEL',
+    'stats.s4.idx': '04 / Difficulty',
+    'stats.s4.val': 'TECHNICAL',
+    'stats.s4.unit': 'HIGH MOUNTAIN — HARD',
+    'route.label': 'Route Intelligence',
+    'route.title': 'THE<br>TERRAIN',
+    'route.desc': 'The most brutal slopes occur in the first 5 kilometers of the ascent. Study every meter. Know the terrain before you step on it.',
+    'route.gps': 'GPS Route',
+    'route.chartTitle': 'Elevation Profile',
+    'route.chartSub': 'DISTANCE (KM) vs. ELEVATION (M)',
+    'timeline.label': 'March Plan',
+    'timeline.title': 'DAY<br>ITINERARY',
+    'timeline.desc': 'Every moment has a purpose. No delays. Weather at altitude does not negotiate.',
+    'timeline.t1.title': 'Meeting Point',
+    'timeline.t1.desc': 'Gathering at the San Martin bridge. Final gear check, hydration loading and mandatory safety briefing. Estimated temperature: 8°C.',
+    'timeline.t1.badge': 'YOU MUST BE ON TIME',
+    'timeline.t2.title': 'Phase I — START',
+    'timeline.t2.desc': 'We start at the foot of the mountain, its imposing presence shows us the challenge we seek to fulfill.',
+    'timeline.t3.title': '☑ SUMMIT',
+    'timeline.t3.desc': 'The peak. Maximum time at the summit: 20 minutes. Photo record, hydration and immediate descent. Descent timing is non-negotiable.',
+    'timeline.t3.badge': 'Strong winds',
+    'timeline.t4.title': 'Descent',
+    'timeline.t4.desc': 'Beginning of descent to the final point.',
+    'timeline.t4.badge': 'Completed',
+    'timeline.t5.title': 'Arrival',
+    'timeline.t5.desc': 'Arrival at the foot of the mountain, road path.',
+    'timeline.t5.badge': 'Objective Completed',
+    'equip.label': 'Checklist',
+    'equip.title': 'MANDATORY<br>GEAR',
+    'equip.desc': 'No exceptions. The gear is for your safety and the team\'s.',
+    'equip.e1.name': 'Technical Footwear',
+    'equip.e1.desc': 'Mountain boots or trail running shoes in good condition.',
+    'equip.e2.name': 'Proper Clothing',
+    'equip.e2.desc': 'Windbreaker, pants, cap, sunglasses, etc.',
+    'equip.e3.name': 'GPS Navigation',
+    'equip.e3.desc': 'Phone fully charged. No excuses.',
+    'equip.e4.name': 'Hydration & Nutrition',
+    'equip.e4.desc': 'Minimum 2L of water with backup purification filter. More than 3,000 kcal in high-availability carbohydrates. Salts, gels and electrolytes are mandatory.',
+    'equip.e5.name': 'Trekking Pole',
+    'equip.e5.desc': 'Poles. Offload up to 40% of effort on descent. Optional for exposed rock sections.',
+    'equip.critical': '⚠ Critical',
+    'equip.e6.name': 'Emergency Kit',
+    'equip.e6.desc': 'First aid kit with: elastic bandages, plasters, painkillers, anti-inflammatories, etc. Personal mandatory.',
+    'cond.label': 'Expected Conditions',
+    'cond.title': 'WEATHER &<br>TERRAIN',
+    'cond.c1.title': 'Daytime Temperature',
+    'cond.c1.desc': 'Estimated base temperature.',
+    'cond.c2.title': 'Maximum Wind',
+    'cond.c2.desc': 'Gusts historically recorded on the north ridge. In extreme wind conditions, an emergency descent protocol is activated.',
+    'cond.c3.title': 'Rain on Route',
+    'cond.c3.desc': 'Probability of rain.',
+    'cond.c4.title': 'Useful Daylight',
+    'cond.c4.desc': 'Sunrise: 06:23. Sunset: 18:31. The itinerary is designed to be fully completed in daylight.',
+    'cond.alert': '<strong>Altitude Alert:</strong> Above 3,500 m, symptoms of altitude sickness may appear (headache, nausea, extreme fatigue).',
+    'cta.eyebrow': 'Few spots remaining',
+    'cta.title': 'ARE YOU<br>READY?',
+    'cta.sub': 'This is not an excursion. It\'s a test of character. If you have to think about it, you already have the answer.',
+    'cta.btn': 'Book my spot via WhatsApp',
+    'cta.spots': 'Only <strong>8 spots available</strong> out of 24 · Registration closes: June 1, 2026',
+    'footer.tagline': 'High mountain expedition in Tarija - Bolivia. Where the mountain puts you in your place.',
+    'footer.sections': 'Sections',
+    'footer.l1': 'Route & Intelligence',
+    'footer.l2': 'Day Itinerary',
+    'footer.l3': 'Gear',
+    'footer.l4': 'Registration',
+    'footer.contact': 'Contact',
+    'footer.location': 'Tarija, Bolivia',
+    'footer.phone': 'Phone:',
+    'footer.copy': '© 2026 DEUNAALCERRO · Bolivia · All rights reserved',
+    'footer.tag2': 'Designed for those who do not give up',
+    'bg.cta': '"REGISTER"',
+    'bg.countdown': '"COUNTDOWN · COUNTDOWN · COUNTDOWN · COUNTDOWN · "',
+    'bg.route': '"ROUTE"'
+  }
+};
+
+let currentLang = localStorage.getItem('elascenso_lang') || 'es';
+
+function applyLang(lang) {
+  currentLang = lang;
+  const dict = I18N[lang];
+  document.documentElement.lang = lang;
+
+  // Plain text elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] !== undefined) el.textContent = dict[key];
+  });
+  // Elements that need HTML (with <br>, <strong>, etc.)
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    if (dict[key] !== undefined) el.innerHTML = dict[key];
+  });
+  // p with cta.spots and cond.alert use data-i18n-html
+  const ctaSpots = document.querySelector('[data-i18n="cta.spots"], [data-i18n-html="cta.spots"]');
+  if (ctaSpots && dict['cta.spots']) ctaSpots.innerHTML = dict['cta.spots'];
+  const condAlert = document.querySelector('[data-i18n-html="cond.alert"]');
+  if (condAlert && dict['cond.alert']) condAlert.innerHTML = dict['cond.alert'];
+
+  // CSS background pseudo-element texts
+  const root = document.documentElement;
+  root.style.setProperty('--cta-bg-text', dict['bg.cta']);
+  root.style.setProperty('--countdown-bg-text', dict['bg.countdown']);
+  root.style.setProperty('--route-bg-text', dict['bg.route']);
+
+  // Toggle highlight
+  const esEl = document.getElementById('langEs');
+  const enEl = document.getElementById('langEn');
+  if (esEl && enEl) {
+    esEl.classList.toggle('lang-active', lang === 'es');
+    enEl.classList.toggle('lang-active', lang === 'en');
+  }
+
+  // Re-fit map and chart since some labels may have changed sizes
+  if (window.fitRouteMap) setTimeout(window.fitRouteMap, 100);
+
+  localStorage.setItem('elascenso_lang', lang);
+}
+
+function toggleLang() {
+  applyLang(currentLang === 'es' ? 'en' : 'es');
+}
+
+// Apply on load
+document.addEventListener('DOMContentLoaded', () => applyLang(currentLang));
+
+// NAV SCROLL
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  navbar.classList.toggle('scrolled', window.scrollY > 60);
+});
+
+// MOBILE MENU
+function toggleMenu() {
+  document.getElementById('mobileMenu').classList.toggle('open');
+}
+
+// HERO BG ANIMATION
+window.addEventListener('load', () => {
+  document.getElementById('heroBg').classList.add('loaded');
+});
+
+// COUNTDOWN
+const targetDate = new Date("2026-05-03T06:00:00").getTime();
+function updateCountdown() {
+  const now = Date.now();
+  const d = targetDate - now;
+  if (d < 0) return;
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('days').textContent    = pad(Math.floor(d / 86400000));
+  document.getElementById('hours').textContent   = pad(Math.floor((d % 86400000) / 3600000));
+  document.getElementById('minutes').textContent = pad(Math.floor((d % 3600000) / 60000));
+  document.getElementById('seconds').textContent = pad(Math.floor((d % 60000) / 1000));
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+
+// COUNTER ANIMATION
+function animateCounter(el) {
+  const target = parseInt(el.dataset.target);
+  if (!target) return;
+  const duration = 2000;
+  const start = performance.now();
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.floor(eased * target).toLocaleString('es');
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// INTERSECTION OBSERVER — REVEAL + COUNTER
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      const counter = entry.target.querySelector('[data-target]');
+      if (counter && !counter.dataset.animated) {
+        counter.dataset.animated = 'true';
+        animateCounter(counter);
+      }
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal, .timeline-item').forEach(el => observer.observe(el));
+
+// STATS COUNTER on stat-items
+const statObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const counter = entry.target.querySelector('[data-target]');
+      if (counter && !counter.dataset.animated) {
+        counter.dataset.animated = 'true';
+        animateCounter(counter);
+      }
+    }
+  });
+}, { threshold: 0.3 });
+document.querySelectorAll('.stat-item').forEach(el => statObserver.observe(el));
+
+// MAP
+const map = L.map('map', {
+  zoomControl: false,
+  tap: true,
+  dragging: true,
+  scrollWheelZoom: false
+}).setView([-21.5355, -64.7296], 12);
+L.tileLayer('http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
+  attribution: '&copy; Google',
+  maxZoom: 20
+}).addTo(map);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+const latlngs = [
+  [-21.607, -64.864], [-21.607, -64.864], [-21.606, -64.864],
+  [-21.605, -64.864], [-21.605, -64.864], [-21.604, -64.865],
+  [-21.603, -64.865], [-21.601, -64.865], [-21.6, -64.865],
+  [-21.6, -64.865], [-21.599, -64.865], [-21.598, -64.865],
+  [-21.597, -64.865], [-21.596, -64.866], [-21.595, -64.866],
+  [-21.594, -64.866], [-21.593, -64.867], [-21.593, -64.868],
+  [-21.592, -64.868], [-21.591, -64.868], [-21.59, -64.869],
+  [-21.589, -64.871], [-21.588, -64.871], [-21.588, -64.873],
+  [-21.588, -64.873], [-21.587, -64.874], [-21.587, -64.875],
+  [-21.586, -64.876], [-21.586, -64.876], [-21.587, -64.877],
+  [-21.587, -64.877], [-21.587, -64.878], [-21.588, -64.879],
+  [-21.588, -64.879], [-21.587, -64.879], [-21.586, -64.879],
+  [-21.586, -64.879], [-21.586, -64.879], [-21.585, -64.879],
+  [-21.585, -64.879], [-21.584, -64.88], [-21.583, -64.88],
+  [-21.582, -64.879], [-21.581, -64.878], [-21.579, -64.877],
+  [-21.578, -64.877], [-21.577, -64.877], [-21.575, -64.877],
+  [-21.574, -64.874], [-21.573, -64.873], [-21.572, -64.872],
+  [-21.572, -64.871], [-21.571, -64.869], [-21.572, -64.868],
+  [-21.572, -64.868], [-21.573, -64.867], [-21.572, -64.865],
+  [-21.572, -64.864], [-21.572, -64.863], [-21.573, -64.861],
+  [-21.574, -64.861], [-21.576, -64.861], [-21.576, -64.861],
+  [-21.578, -64.861], [-21.578, -64.861], [-21.58, -64.861],
+  [-21.581, -64.861], [-21.581, -64.86], [-21.582, -64.859],
+  [-21.584, -64.858], [-21.584, -64.857], [-21.585, -64.855],
+  [-21.585, -64.854], [-21.585, -64.853], [-21.585, -64.852],
+  [-21.585, -64.851], [-21.585, -64.849], [-21.585, -64.847],
+  [-21.585, -64.846], [-21.584, -64.845], [-21.585, -64.843],
+  [-21.585, -64.842], [-21.585, -64.839], [-21.585, -64.838],
+  [-21.586, -64.834]
+];
+const polyline = L.polyline(latlngs, { color: '#FF3D00', weight: 3, opacity: 0.9 }).addTo(map);
+
+const startIcon = L.divIcon({
+  html: `<div style="width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid #fff;box-shadow:0 0 10px #4ade80"></div>`,
+  className: '', iconSize: [10, 10], iconAnchor: [5, 5]
+});
+const endIcon = L.divIcon({
+  html: `<div style="width:10px;height:10px;border-radius:50%;background:#FF3D00;border:2px solid #fff;box-shadow:0 0 10px #FF3D00"></div>`,
+  className: '', iconSize: [10, 10], iconAnchor: [5, 5]
+});
+L.marker(latlngs[0], { icon: startIcon }).addTo(map).bindPopup(currentLang === 'en' ? 'Starting Point' : 'Punto de Partida');
+L.marker(latlngs[latlngs.length - 1], { icon: endIcon }).addTo(map).bindPopup(currentLang === 'en' ? 'Summit 3,580m' : 'Cumbre 3.580m');
+function fitRouteMap() {
+  const mobilePadding = window.innerWidth <= 768 ? [22, 22] : [30, 30];
+  map.invalidateSize();
+  map.fitBounds(polyline.getBounds(), { padding: mobilePadding });
+}
+window.fitRouteMap = fitRouteMap;
+fitRouteMap();
+window.addEventListener('load', () => setTimeout(fitRouteMap, 120));
+window.addEventListener('resize', () => setTimeout(fitRouteMap, 160));
+
+const routeSectionForMap = document.getElementById('ruta');
+if (routeSectionForMap) {
+  const mapResizeObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) setTimeout(fitRouteMap, 180);
+    });
+  }, { threshold: 0.25 });
+  mapResizeObserver.observe(routeSectionForMap);
+}
+
+// ELEVATION CHART
+const ctx = document.getElementById('elevationChart').getContext('2d');
+const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+gradient.addColorStop(0, 'rgba(255,61,0,0.25)');
+gradient.addColorStop(0.5, 'rgba(255,61,0,0.08)');
+gradient.addColorStop(1, 'rgba(255,61,0,0)');
+
+const isMobileViewport = () => window.innerWidth <= 768;
+const isSmallViewport = () => window.innerWidth <= 480;
+
+const elevationChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: ['0.00', '0.25', '0.50', '0.75', '1.00', '1.25', '1.50', '1.75', '2.00', '2.25', '2.50', '2.75', '3.00', '3.25', '3.50', '3.75', '4.00', '4.25', '4.50', '4.75', '5.00', '5.25', '5.50', '5.75', '6.00', '6.25', '6.50', '6.75', '7.00', '7.25', '7.50', '7.75', '8.00', '8.25', '8.50', '8.75', '9.00', '9.25', '9.50', '9.75', '10.00', '10.25', '10.50', '10.75', '11.00'],
+    datasets: [{
+      label: currentLang === 'en' ? 'Elevation (m)' : 'Elevación (m)',
+      data: [2193, 2269, 2368, 2415, 2493, 2531, 2592, 2653, 2757, 2816, 2935, 3036, 3146, 3187, 3236, 3296, 3382, 3451, 3461, 3489, 3542, 3552, 3479, 3478, 3407, 3279, 3223, 3166, 3246, 3239, 3114, 3030, 3001, 2937, 2914, 2877, 2773, 2683, 2597, 2526, 2444, 2348, 2256, 2196, 2089],
+      borderColor: '#FF3D00',
+      borderWidth: isMobileViewport() ? 2.5 : 2,
+      backgroundColor: gradient,
+      fill: true,
+      tension: 0.4,
+      pointRadius: isMobileViewport() ? 2 : 0,
+      pointHoverRadius: isMobileViewport() ? 5 : 6,
+      pointHoverBackgroundColor: '#fff',
+      pointHoverBorderColor: '#FF3D00',
+      pointHoverBorderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        mode: 'index', intersect: false,
+        backgroundColor: 'rgba(6,4,7,0.95)',
+        titleColor: '#6b6470',
+        bodyColor: '#f0ede8',
+        borderColor: 'rgba(255,61,0,0.3)',
+        borderWidth: 1,
+        padding: isMobileViewport() ? 10 : 14,
+        displayColors: false,
+        callbacks: {
+          title: ctx => ctx[0].label + ' km',
+          label: ctx => ctx.parsed.y.toLocaleString('es') + ' m',
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          color: '#6b6470',
+          font: { family: 'Space Mono', size: isSmallViewport() ? 8 : 10 },
+          maxRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: isMobileViewport() ? 5 : 9
+        },
+        border: { color: 'rgba(255,255,255,0.07)' }
+      },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: {
+          color: '#6b6470',
+          stepSize: isMobileViewport() ? 1500 : 1000,
+          font: { family: 'Space Mono', size: isSmallViewport() ? 8 : 10 },
+          callback: val => isSmallViewport() ? (val / 1000).toFixed(val % 1000 === 0 ? 0 : 1) + 'k' : val.toLocaleString('es') + 'm',
+          maxTicksLimit: isMobileViewport() ? 4 : 6
+        },
+        border: { color: 'rgba(255,255,255,0.07)' }
+      }
+    },
+    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+  }
+});
+
+function applyElevationChartResponsiveOptions() {
+  const mobile = isMobileViewport();
+  const small = isSmallViewport();
+  elevationChart.options.scales.x.ticks.font.size = small ? 8 : 10;
+  elevationChart.options.scales.x.ticks.maxTicksLimit = mobile ? 5 : 9;
+  elevationChart.options.scales.y.ticks.font.size = small ? 8 : 10;
+  elevationChart.options.scales.y.ticks.stepSize = mobile ? 1500 : 1000;
+  elevationChart.options.scales.y.ticks.maxTicksLimit = mobile ? 4 : 6;
+  elevationChart.options.plugins.tooltip.padding = mobile ? 10 : 14;
+  elevationChart.data.datasets[0].borderWidth = mobile ? 2.5 : 2;
+  elevationChart.data.datasets[0].pointRadius = mobile ? 2 : 0;
+  elevationChart.resize();
+  elevationChart.update('none');
+}
+window.addEventListener('resize', applyElevationChartResponsiveOptions);
+applyElevationChartResponsiveOptions();
+</script>
+</body>
+</html>
